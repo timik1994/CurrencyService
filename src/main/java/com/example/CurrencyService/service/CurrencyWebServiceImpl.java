@@ -6,10 +6,11 @@ import com.example.CurrencyService.pojo.Currency;
 import com.example.CurrencyService.pojo.CurrencyPair;
 import com.example.CurrencyService.repository.CurrencyPairRepository;
 import com.example.CurrencyService.repository.ExchangeRateRepository;
-import com.example.CurrencyService.repository.RestAPiRepository;
+import com.example.CurrencyService.repository.CbrApiRepository;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -24,18 +25,29 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
     private final ExchangeRateRepository exchangeRateRepository;
     private final CurrencyPairRepository currencyPairRepository;
 
-    private final RestAPiRepository restAPiRepository;
+    private final CbrApiRepository cbrApiRepository;
 
     private Map<String, Currency> mapCurrencyCatalog;
 
+
     @Autowired
-    public CurrencyWebServiceImpl(ExchangeRateRepository exchangeRateRepository, CurrencyPairRepository currencyPairRepository, RestAPiRepository restAPiRepositor) {
+    public CurrencyWebServiceImpl(ExchangeRateRepository exchangeRateRepository, CurrencyPairRepository currencyPairRepository, CbrApiRepository cbrApiRepository) {
         this.currencyPairRepository = currencyPairRepository;
         this.exchangeRateRepository = exchangeRateRepository;
-        this.restAPiRepository = restAPiRepositor;
-        this.mapCurrencyCatalog = restAPiRepositor.getMapCurrencyCatalog();
+        this.cbrApiRepository = cbrApiRepository;
+        this.mapCurrencyCatalog = cbrApiRepository.getMapCurrencyCatalog();
     }
 
+
+    @Override
+    public Float getExchangeRateByDateAndId(int idCurrencyPair, Date rateDate) {
+        return null;
+    }
+
+    @Override
+    public Float getExchangeRateById(int idCurrencyPair) {
+        return exchangeRateRepository.getExchangeRateById(idCurrencyPair);
+    }
 
     @Override
     public Boolean addCurrencyPair(String currencyBase, String secondCurrency) {
@@ -43,7 +55,7 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
     }
 
     @Override
-    public List<CurrencyPairModel> getExchangeRateList() {
+    public List<CurrencyPairModel> getCurrencyPairList() {
         return currencyPairRepository.findAll();
     }
 
@@ -56,6 +68,7 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
             log.info("currency {} or currency {} not found list currency", baseCurrency, secondCurrency);
             return false;
         }
+
 
         Currency objectCurrencyBased = mapCurrencyCatalog.get(baseCurrency);
         Currency objectCurrencySecond = mapCurrencyCatalog.get(secondCurrency);
@@ -90,7 +103,7 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
         }
 
         //TODO Получаем список котировок
-        Map<String, CurrencyPair> todayCourseCurrencyPairMap = restAPiRepository.getMapCourseCurrencyPair();
+        Map<String, CurrencyPair> todayCourseCurrencyPairMap = cbrApiRepository.getMapCourseCurrencyPair();
 
         //TODO рассчитать котировки и вернуть список.
         List<ExchangeRate> exchangeRateList = getListExchangeRate(listCurrencyPairByDataBase, todayCourseCurrencyPairMap);

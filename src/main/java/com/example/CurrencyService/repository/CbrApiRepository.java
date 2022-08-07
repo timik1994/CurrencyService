@@ -3,19 +3,18 @@ package com.example.CurrencyService.repository;
 import com.example.CurrencyService.pojo.Currency;
 import com.example.CurrencyService.pojo.CurrencyPair;
 import com.example.CurrencyService.utils.Utils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import okhttp3.*;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
-public class RestAPiRepository {
+public class CbrApiRepository {
 
     @Value("classpath:../main/getListCurrencyPair.xml")
     private Resource res;
@@ -76,13 +75,11 @@ public class RestAPiRepository {
         OkHttpClient client = new OkHttpClient().newBuilder().build();
 
         Request request = new Request.Builder()
-                .url("http://www.cbr.ru/scripts/XML_daily.asp?date_req=05/08/2022")
+                .url("http://www.cbr.ru/scripts/XML_daily.asp?date_req=")
                 .method("GET", null)
                 .build();
         Response response = client.newCall(request).execute();
 
         return response.body().string();
     }
-
-
 }
