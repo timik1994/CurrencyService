@@ -6,10 +6,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
 @Repository
 public interface ExchangeRateRepository extends JpaRepository<ExchangeRate, Long> {
-    @Query(value = "SELECT rate_value FROM exchange_rate WHERE currency_pair_id = :currency_pair_id", nativeQuery = true)
-    Float getExchangeRateById(@Param("currency_pair_id") Integer currencyPairId);
+
+    @Query(value = "SELECT FIRST 1 SKIP 0 er.* FROM exchange_rate er WHERE er.currency_pair_id = :currency_pair_id ORDER BY er.RATE_DATE DESC ", nativeQuery = true)
+    ExchangeRate getExchangeRateById(@Param("currency_pair_id") Integer currencyPairId);
+
 }
+
+

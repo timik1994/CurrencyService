@@ -9,12 +9,11 @@ import com.example.CurrencyService.repository.ExchangeRateRepository;
 import com.example.CurrencyService.repository.CbrApiRepository;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -27,7 +26,9 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
 
     private final CbrApiRepository cbrApiRepository;
 
-    private Map<String, Currency> mapCurrencyCatalog;
+    private final Map<String, Currency> mapCurrencyCatalog;
+
+    private final SimpleDateFormat simpleDateFormat;
 
 
     @Autowired
@@ -36,17 +37,7 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
         this.exchangeRateRepository = exchangeRateRepository;
         this.cbrApiRepository = cbrApiRepository;
         this.mapCurrencyCatalog = cbrApiRepository.getMapCurrencyCatalog();
-    }
-
-
-    @Override
-    public Float getExchangeRateByDateAndId(int idCurrencyPair, Date rateDate) {
-        return null;
-    }
-
-    @Override
-    public Float getExchangeRateById(int idCurrencyPair) {
-        return exchangeRateRepository.getExchangeRateById(idCurrencyPair);
+        this.simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy");
     }
 
     @Override
@@ -55,8 +46,32 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
     }
 
     @Override
-    public List<CurrencyPairModel> getCurrencyPairList() {
+    public List<CurrencyPairModel> getCurrencyPairs() {
         return currencyPairRepository.findAll();
+    }
+
+    @Override
+    public Float getValueCurseByCurrencyPair(Integer idCurrencyPair) {
+        try {
+            return exchangeRateRepository.getExchangeRateById(idCurrencyPair).getRateValue();
+        } catch (NullPointerException e) {
+            return null;
+        }
+    }
+
+    @Override
+    public Float getValueCurseByCurrencyPair(Integer idCurrencyPair, Date rateDate) {
+
+        Map<String, CurrencyPair> currencyPairMap = cbrApiRepository.getMapCourseCurrencyPair(simpleDateFormat.format(rateDate));
+
+        CurrencyPairModel currencyPairModel = currencyPairRepository.findById(idCurrencyPair).orElse(null);
+        List<ExchangeRate> exchangeRateList = getListExchangeRate(Arrays.asList(currencyPairModel), currencyPairMap);
+
+        try {
+            return exchangeRateList.get(0).getRateValue();
+        } catch (NullPointerException e) {
+            return null;
+        }
     }
 
 
@@ -69,11 +84,16 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
             return false;
         }
 
-
         Currency objectCurrencyBased = mapCurrencyCatalog.get(baseCurrency);
         Currency objectCurrencySecond = mapCurrencyCatalog.get(secondCurrency);
 
-        //TODO Подумать какой id нужно сетить в БД
+        CurrencyPairModel currencyPairModel = currencyPairRepository.getCurrencyPairByPairName(baseCurrency, secondCurrency);
+
+        if (currencyPairModel != null) {
+            log.info("currency {} or currency {} is exists DB", baseCurrency, secondCurrency);
+            return false;
+        }
+
         int id = objectCurrencyBased.getVnumCode() * objectCurrencySecond.getVnumCode();
 
         while (currencyPairRepository.findById(id).orElse(null) != null) {
@@ -92,7 +112,8 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
     }
 
 
-    @Scheduled(fixedRate = 60_000)
+    //86_400_000 24 часа
+    @Scheduled(fixedRate = 20_000)
     private void fillTableExchangeRate() {
 
         //TODO получаем все пары из таблицы currency_pair
@@ -102,8 +123,9 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
             return;
         }
 
+
         //TODO Получаем список котировок
-        Map<String, CurrencyPair> todayCourseCurrencyPairMap = cbrApiRepository.getMapCourseCurrencyPair();
+        Map<String, CurrencyPair> todayCourseCurrencyPairMap = cbrApiRepository.getMapCourseCurrencyPair(simpleDateFormat.format(new Date()));
 
         //TODO рассчитать котировки и вернуть список.
         List<ExchangeRate> exchangeRateList = getListExchangeRate(listCurrencyPairByDataBase, todayCourseCurrencyPairMap);
@@ -123,14 +145,29 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
             String baseCharCode = currencyPairModel.getBaseCharCode(); //Базовая валюта
             String quotedCharCode = currencyPairModel.getQuotedCharCode(); //Валюта исчисления
 
+            if (quotedCharCode.equals("RUB")) {
+                CurrencyPair courseBaseCharCode = todayCourseCurrencyPairMap.get(baseCharCode);
+                ExchangeRate exchangeRate = new ExchangeRate(Timestamp.valueOf(LocalDateTime.now()), courseBaseCharCode.getValue(), currencyPairModel.getId());
+                exchangeRateList.add(exchangeRate);
+                break;
+            }
+
+            if (baseCharCode.equals("RUB")) {
+
+                CurrencyPair courseQuotedCharCode = todayCourseCurrencyPairMap.get(quotedCharCode);
+                Float rateValue = courseQuotedCharCode.getNominal() / courseQuotedCharCode.getValue();
+                ExchangeRate exchangeRate = new ExchangeRate(Timestamp.valueOf(LocalDateTime.now()), rateValue, currencyPairModel.getId());
+                exchangeRateList.add(exchangeRate);
+                break;
+
+            }
+
             //TODO получаем по выбранным валютам котировки по отношению к рублю EUR/USD
             CurrencyPair courseBaseCharCode = todayCourseCurrencyPairMap.get(baseCharCode);
             CurrencyPair courseQuotedCharCode = todayCourseCurrencyPairMap.get(quotedCharCode);
 
             //TODO Рассчитываем курс базовая валюта делаться на валюты исчисления
             Float rateValue = (courseBaseCharCode.getValue() / (float) courseBaseCharCode.getNominal()) / (courseQuotedCharCode.getValue() / (float) courseQuotedCharCode.getNominal());
-
-
             ExchangeRate exchangeRate = new ExchangeRate(Timestamp.valueOf(LocalDateTime.now()), rateValue, currencyPairModel.getId());
 
             exchangeRateList.add(exchangeRate);

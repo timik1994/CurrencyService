@@ -16,33 +16,36 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 public class CurrencyController {
 
-    private CurrencyWebService currencyWebService;
+
+    private final CurrencyWebService currencyWebService;
 
     @Autowired
     public CurrencyController(CurrencyWebService currencyWebService) {
         this.currencyWebService = currencyWebService;
     }
 
-    @Operation(description = "Принимающий в качестве параметров идентификатор валютной пары (currency_pair_id) и дату (rate_date), возвращающий курс rate_value на заданную дату", tags = "Курс на заданную дату")
-    @RequestMapping(value = "/getExchangeRateByDate/{idCurrencyPair}/{rateDate}", method = RequestMethod.GET)
-    public ResponseEntity<Float> getExchangeRateByDate(@PathVariable(name = "idCurrencyPair") int idCurrencyPair, @PathVariable(name = "rateDate") @DateTimeFormat(pattern = "dd-MM-yyyy") Date rateDate) {
-        return new ResponseEntity<>(currencyWebService.getExchangeRateByDateAndId(idCurrencyPair, rateDate), HttpStatus.OK);
+    @Operation(description = "Принимающий в качестве параметров идентификатор валютной пары (currency_pair_id) и дату (rate_date) в формате dd-mm-yyyy, возвращающий курс rate_value на заданную дату", tags = "Курс на заданную дату")
+    @RequestMapping(value = "/getExchangeRate/{idCurrencyPair}/{rateDate}", method = RequestMethod.GET)
+    public ResponseEntity<Float> getExchangeRate(@PathVariable(name = "idCurrencyPair") int idCurrencyPair, @PathVariable(name = "rateDate") @DateTimeFormat(pattern = "dd-MM-yyyy") Date rateDate) {
+        Float valueExchangeRate = currencyWebService.getValueCurseByCurrencyPair(idCurrencyPair, rateDate);
+        return valueExchangeRate != null ? new ResponseEntity<>(valueExchangeRate, HttpStatus.OK) : new ResponseEntity<>(valueExchangeRate, HttpStatus.NOT_FOUND);
     }
 
-    @Operation(description = "принимающий в качестве параметров код валюты (currency_pair_id), возвращающий самый актуальный курс rate_value", tags = "Самый актуальный курс по коду валюты")
-    @RequestMapping(value = "/getExchangeRateById/{idCurrency}", method = RequestMethod.GET)
+    @Operation(description = "Принимающий в качестве параметров код валюты (currency_pair_id), возвращающий самый актуальный курс rate_value", tags = "Самый актуальный курс по коду валюты")
+    @RequestMapping(value = "/getExchangeRate/{idCurrency}", method = RequestMethod.GET)
     public ResponseEntity<Float> getExchangeRate(@PathVariable(name = "idCurrency") int idCurrencyPair) {
-        return new ResponseEntity<>(currencyWebService.getExchangeRateById(idCurrencyPair), HttpStatus.OK);
+        Float valueExchangeRate = currencyWebService.getValueCurseByCurrencyPair(idCurrencyPair);
+        return valueExchangeRate != null ? new ResponseEntity<>(valueExchangeRate, HttpStatus.OK) : new ResponseEntity<>(valueExchangeRate, HttpStatus.NOT_FOUND);
     }
 
-    @Operation(description = "возвращающий список валютных пар с идентификаторами, по которым можно получить курс", tags = "Получить список валютных пар")
-    @RequestMapping(value = "/getCurrencyPairList", method = RequestMethod.GET)
-    public ResponseEntity<List<CurrencyPairModel>> getCurrencyPairList() {
-        return new ResponseEntity<>(currencyWebService.getCurrencyPairList(),HttpStatus.OK);
+    @Operation(description = "Возвращающий список валютных пар с идентификаторами, по которым можно получить курс", tags = "Получить список валютных пар")
+    @RequestMapping(value = "/getCurrencyPairs", method = RequestMethod.GET)
+    public ResponseEntity<List<CurrencyPairModel>> getCurrencyPairs() {
+        return new ResponseEntity<>(currencyWebService.getCurrencyPairs(), HttpStatus.OK);
     }
 
-    @Operation(description = "принимающий в теле запроса данные о базовой валюте и валюте исчисления. Должен заносить соответствующую валютную пару в таблицу currency_pair", tags = "Добавление валютной пары")
-    @RequestMapping(value = "addCurrencyPair", method = RequestMethod.POST)
+    @Operation(description = "Принимающий в теле запроса данные о базовой валюте и валюте исчисления. Должен заносить соответствующую валютную пару в таблицу currency_pair", tags = "Добавление валютной пары")
+    @RequestMapping(value = "/addCurrencyPair", method = RequestMethod.POST)
     public ResponseEntity<String> addCurrencyPair(@RequestParam String currencyBase, @RequestParam String secondCurrency) {
 
         boolean result = currencyWebService.addCurrencyPair(currencyBase, secondCurrency);

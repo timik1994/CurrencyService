@@ -9,7 +9,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,11 +31,11 @@ public class CbrApiRepository {
     }
 
 
-    public Map<String, CurrencyPair> getMapCourseCurrencyPair() {
+    public Map<String, CurrencyPair> getMapCourseCurrencyPair(String date) {
         Map<String, CurrencyPair> stringCurrencyPairMap = new HashMap<>();
 
         try {
-            String resultXml = getXMLCourseCurrencyPair();
+            String resultXml = getXMLCourseCurrencyPair(date);
             Utils.parsingXMLAndFillingMapCourseCurrencyPair(resultXml, stringCurrencyPairMap);
             return stringCurrencyPairMap;
         } catch (Exception e) {
@@ -69,13 +68,19 @@ public class CbrApiRepository {
         return response.body().string();
     }
 
+    //TODO формат 05/08/2022
+    private String getXMLCourseCurrencyPair(String date) throws IOException {
 
-    private String getXMLCourseCurrencyPair() throws IOException {
+        if (date == null) {
+            return null;
+        }
+
+        String url = "http://www.cbr.ru/scripts/XML_daily.asp?date_req=" + date;
 
         OkHttpClient client = new OkHttpClient().newBuilder().build();
 
         Request request = new Request.Builder()
-                .url("http://www.cbr.ru/scripts/XML_daily.asp?date_req=")
+                .url(url)
                 .method("GET", null)
                 .build();
         Response response = client.newCall(request).execute();
