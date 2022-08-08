@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -28,6 +29,9 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
 
     private final Map<String, Currency> mapCurrencyCatalog;
 
+    private Map<String, CurrencyPair> todayCourseCurrencyPairMap;
+    private LocalDate checkCurrencyPairDate;
+
     private final SimpleDateFormat simpleDateFormat;
 
 
@@ -38,6 +42,7 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
         this.cbrApiRepository = cbrApiRepository;
         this.mapCurrencyCatalog = cbrApiRepository.getMapCurrencyCatalog();
         this.simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy");
+        this.checkCurrencyPairDate = LocalDate.now();
     }
 
     @Override
@@ -123,6 +128,12 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
             return;
         }
 
+        //TODO Получаем новые котировки из ЦБ РФ Map если курс валют еще не заполнен, или время последнего обновления курса было вчера.
+        if (todayCourseCurrencyPairMap == null || checkCurrencyPairDate.isBefore(LocalDate.now())) {
+            checkCurrencyPairDate = LocalDate.now();
+            //TODO Получаем список котировок
+            todayCourseCurrencyPairMap = cbrApiRepository.getMapCourseCurrencyPair(simpleDateFormat.format(new Date()));
+        }
 
         //TODO Получаем список котировок
         Map<String, CurrencyPair> todayCourseCurrencyPairMap = cbrApiRepository.getMapCourseCurrencyPair(simpleDateFormat.format(new Date()));
@@ -149,7 +160,7 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
                 CurrencyPair courseBaseCharCode = todayCourseCurrencyPairMap.get(baseCharCode);
                 ExchangeRate exchangeRate = new ExchangeRate(Timestamp.valueOf(LocalDateTime.now()), courseBaseCharCode.getValue(), currencyPairModel.getId());
                 exchangeRateList.add(exchangeRate);
-                break;
+                continue;
             }
 
             if (baseCharCode.equals("RUB")) {
@@ -158,7 +169,7 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
                 Float rateValue = courseQuotedCharCode.getNominal() / courseQuotedCharCode.getValue();
                 ExchangeRate exchangeRate = new ExchangeRate(Timestamp.valueOf(LocalDateTime.now()), rateValue, currencyPairModel.getId());
                 exchangeRateList.add(exchangeRate);
-                break;
+                continue;
 
             }
 
