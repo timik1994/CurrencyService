@@ -1,4 +1,4 @@
-#  CurrencyService - валютный сервис, управляемый через браузер.
+#  CurrencyService - валютный сервис.
 
 ## Возможности:
 ### Периодическая задача.
@@ -30,7 +30,7 @@
 - перед использованием метода необходимо добавить валютные пары в таблицу currency_pair посредством метода "Добавление валютной пары";
 
  Взаимодействие с интерфейсом сервиса реализуется через SwaggerUI. 
-Ссылка: http://localhost:8080/swagger-ui/index.html?configUrl=/api-docs/swagger-config#/
+Ссылка: http://localhost:8080/swagger-ui/index.html
 
 ## Используемый стек технологий:
 - Java 11
@@ -45,3 +45,5 @@
 - подход REST FULL APPLICATION
 - API ЦБ РФ
 - SOAP-запросы
+- Log4j2
+- SQL
