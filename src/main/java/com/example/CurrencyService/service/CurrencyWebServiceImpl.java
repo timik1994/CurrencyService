@@ -121,35 +121,35 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
     @Scheduled(fixedRate = 20_000)
     private void fillTableExchangeRate() {
 
-        //TODO получаем все пары из таблицы currency_pair
+        /* получаем все пары из таблицы currency_pair */
         List<CurrencyPairModel> listCurrencyPairByDataBase = currencyPairRepository.findAll();
 
         if (listCurrencyPairByDataBase.size() == 0) {
             return;
         }
 
-        //TODO Получаем новые котировки из ЦБ РФ Map если курс валют еще не заполнен, или время последнего обновления курса было вчера.
+        /* Получаем новые котировки из ЦБ РФ Map если курс валют еще не заполнен, или время последнего обновления курса было вчера. */
         if (todayCourseCurrencyPairMap == null || checkCurrencyPairDate.isBefore(LocalDate.now())) {
             checkCurrencyPairDate = LocalDate.now();
-            //TODO Получаем список котировок
+            /*  Получаем список котировок */
             todayCourseCurrencyPairMap = cbrApiRepository.getMapCourseCurrencyPair(simpleDateFormat.format(new Date()));
         }
 
-        //TODO Получаем список котировок
+        /* Получаем список котировок */
         Map<String, CurrencyPair> todayCourseCurrencyPairMap = cbrApiRepository.getMapCourseCurrencyPair(simpleDateFormat.format(new Date()));
 
-        //TODO рассчитать котировки и вернуть список.
+        /*  рассчитать котировки и вернуть список */
         List<ExchangeRate> exchangeRateList = getListExchangeRate(listCurrencyPairByDataBase, todayCourseCurrencyPairMap);
 
-        //TODO Сохраняем котировки по валютам в таблицу exchange_rate
+        /* Сохраняем котировки по валютам в таблицу exchange_rate */
         exchangeRateRepository.saveAll(exchangeRateList);
     }
 
-    //TODO Дописать логику для рубля
+
     private List<ExchangeRate> getListExchangeRate(List<CurrencyPairModel> listCurrencyPairByDataBase, Map<String, CurrencyPair> todayCourseCurrencyPairMap) {
 
         List<ExchangeRate> exchangeRateList = new ArrayList<>();
-        //TODO Находим в текущих котировках валюты из БД и получаем по ним котировку
+        /* Находим в текущих котировках валюты из БД и получаем по ним котировку */
 
         for (CurrencyPairModel currencyPairModel : listCurrencyPairByDataBase) {
 
@@ -173,11 +173,11 @@ public class CurrencyWebServiceImpl implements CurrencyWebService {
 
             }
 
-            //TODO получаем по выбранным валютам котировки по отношению к рублю EUR/USD
+           /* получаем по выбранным валютам котировки по отношению к рублю EUR/USD */
             CurrencyPair courseBaseCharCode = todayCourseCurrencyPairMap.get(baseCharCode);
             CurrencyPair courseQuotedCharCode = todayCourseCurrencyPairMap.get(quotedCharCode);
 
-            //TODO Рассчитываем курс базовая валюта делаться на валюты исчисления
+            /* Рассчитываем курс базовая валюта делаться на валюты исчисления */
             Float rateValue = (courseBaseCharCode.getValue() / (float) courseBaseCharCode.getNominal()) / (courseQuotedCharCode.getValue() / (float) courseQuotedCharCode.getNominal());
             ExchangeRate exchangeRate = new ExchangeRate(Timestamp.valueOf(LocalDateTime.now()), rateValue, currencyPairModel.getId());
 

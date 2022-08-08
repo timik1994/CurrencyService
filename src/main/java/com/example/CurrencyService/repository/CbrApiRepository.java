@@ -68,7 +68,7 @@ public class CbrApiRepository {
         return response.body().string();
     }
 
-    //TODO формат 05/08/2022
+    /* формат 05/08/2022 */
     private String getXMLCourseCurrencyPair(String date) throws IOException {
 
         if (date == null) {
